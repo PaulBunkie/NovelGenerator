@@ -13,6 +13,8 @@ interface UserInputProps {
   setNumChapters: (value: number) => void;
   genre: string;
   setGenre: (value: string) => void;
+  language: string;
+  setLanguage: (value: string) => void;
   onSubmit: () => void;
   isLoading: boolean;
 }
@@ -24,6 +26,8 @@ const UserInput: React.FC<UserInputProps> = ({
   setNumChapters,
   genre,
   setGenre,
+  language,
+  setLanguage,
   onSubmit,
   isLoading,
 }) => {
@@ -55,7 +59,7 @@ const UserInput: React.FC<UserInputProps> = ({
         <p className="text-xs text-slate-400 mt-1">Max 1200 characters. Be descriptive</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label htmlFor="genre" className="block text-sm font-medium text-sky-300 mb-1">
             Genre
@@ -68,16 +72,33 @@ const UserInput: React.FC<UserInputProps> = ({
           >
             {Object.entries(GENRE_CONFIGS).map(([key, config]) => (
               <option key={key} value={key}>
-                {config.name} - {config.description}
+                {config.name}
               </option>
             ))}
           </Select>
-          <p className="text-xs text-slate-400 mt-1">Choose your story genre</p>
+        </div>
+
+        <div>
+          <label htmlFor="language" className="block text-sm font-medium text-sky-300 mb-1">
+            Language
+          </label>
+          <Select
+            id="language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="bg-slate-700 border-slate-600 focus:ring-sky-500 focus:border-sky-500"
+          >
+            <option value="English">English</option>
+            <option value="Russian">Русский (Russian)</option>
+            <option value="Spanish">Español (Spanish)</option>
+            <option value="French">Français (French)</option>
+            <option value="German">Deutsch (German)</option>
+          </Select>
         </div>
 
         <div>
           <label htmlFor="numChapters" className="block text-sm font-medium text-sky-300 mb-1">
-            Number of Chapters
+            Chapters
           </label>
           <Input
             id="numChapters"
@@ -88,7 +109,6 @@ const UserInput: React.FC<UserInputProps> = ({
             required
             className="bg-slate-700 border-slate-600 focus:ring-sky-500 focus:border-sky-500"
           />
-           <p className="text-xs text-slate-400 mt-1">Minimum {MIN_CHAPTERS} chapters</p>
         </div>
       </div>
 

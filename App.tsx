@@ -118,6 +118,8 @@ const App: React.FC = () => {
               setNumChapters={setNumChapters}
               genre={storySettings.genre || 'fantasy'}
               setGenre={(genre) => setStorySettings({ ...storySettings, genre })}
+              language={storySettings.language || 'English'}
+              setLanguage={(language) => setStorySettings({ ...storySettings, language })}
               onSubmit={handleStartGeneration}
               isLoading={isLoading}
             />

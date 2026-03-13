@@ -197,6 +197,7 @@ export interface StorySettings {
   tone?: string;
   targetAudience?: string;
   writingStyle?: string;
+  language?: string;
 }
 
 // Agent activity log for UI display

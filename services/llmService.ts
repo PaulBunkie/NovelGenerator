@@ -4,6 +4,7 @@ import { withResilienceTracking } from '../utils/apiResilienceUtils';
 declare const process: {
   env: {
     OPENROUTER_API_KEY?: string;
+    OPENROUTER_MODEL?: string;
     SITE_URL?: string;
     SITE_NAME?: string;
     [key: string]: string | undefined;
@@ -13,6 +14,13 @@ declare const process: {
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.SITE_URL || 'http://localhost:3000';
 const SITE_NAME = process.env.SITE_NAME || 'NovelGenerator';
+
+let globalLanguage = 'English';
+
+export function setGlobalLanguage(language: string) {
+  globalLanguage = language;
+  console.log(`🌐 Global language set to: ${language}`);
+}
 
 const handleApiError = (error: unknown): Error => {
   console.error("❌ Error calling OpenRouter API:", error);
@@ -76,18 +84,20 @@ export async function generateLLMText(
   responseSchema?: object,
   temperature?: number,
   topP?: number,
-  topK?: number
+  topK?: number,
+  language?: string
 ): Promise<string> {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenRouter API key is not initialized. OPENROUTER_API_KEY is missing.");
   }
 
+  const selectedLanguage = language || globalLanguage;
   const maxRetries = responseSchema ? 7 : 5;
   const baseDelay = responseSchema ? 3000 : 2000;
 
   return withResilienceTracking(() => retryWithBackoff(async () => {
     try {
-      const languageInstruction = "\n\nIMPORTANT: Respond in the SAME LANGUAGE as the user input (e.g., if the user premise/prompt is in Russian, respond in Russian). All narrative, dialogue, and descriptions must match the input language.";
+      const languageInstruction = `\n\nIMPORTANT: Respond in ${selectedLanguage.toUpperCase()}. All narrative, dialogue, and descriptions MUST be in ${selectedLanguage}. Do not use English unless specifically requested in the prompt.`;
       
       const messages: any[] = [];
       if (systemInstruction) {
@@ -112,6 +122,7 @@ export async function generateLLMText(
 
       console.log(`🔄 Sending request to OpenRouter API...
         Model: ${MODEL_NAME}
+        Language: ${selectedLanguage}
         Temperature: ${temperature ?? 0.7}
         Prompt length: ${prompt.length} chars
         System instruction: ${systemInstruction ? 'Yes' : 'No'}
@@ -155,15 +166,18 @@ export async function generateLLMTextStream(
   systemInstruction?: string,
   temperature?: number,
   topP?: number,
-  topK?: number
+  topK?: number,
+  language?: string
 ): Promise<string> {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenRouter API key is not initialized. OPENROUTER_API_KEY is missing.");
   }
 
+  const selectedLanguage = language || globalLanguage;
+
   return retryWithBackoff(async () => {
     try {
-      const languageInstruction = "\n\nIMPORTANT: Respond in the SAME LANGUAGE as the user input (e.g., if the user premise/prompt is in Russian, respond in Russian). All narrative, dialogue, and descriptions must match the input language.";
+      const languageInstruction = `\n\nIMPORTANT: Respond in ${selectedLanguage.toUpperCase()}. All narrative, dialogue, and descriptions MUST be in ${selectedLanguage}. Do not use English unless specifically requested in the prompt.`;
 
       const messages: any[] = [];
       if (systemInstruction) {
@@ -175,6 +189,7 @@ export async function generateLLMTextStream(
 
       console.log(`🔄 Starting stream from OpenRouter API...
         Model: ${MODEL_NAME}
+        Language: ${selectedLanguage}
         Prompt length: ${prompt.length} chars`);
 
       const startTime = Date.now();
@@ -345,10 +360,11 @@ export async function generateLLMTextQueued(
   temperature?: number,
   topP?: number,
   topK?: number,
-  priority: 'high' | 'medium' | 'low' = 'medium'
+  priority: 'high' | 'medium' | 'low' = 'medium',
+  language?: string
 ): Promise<string> {
   return requestQueue.enqueue(
-    () => generateLLMText(prompt, systemInstruction, responseSchema, temperature, topP, topK),
+    () => generateLLMText(prompt, systemInstruction, responseSchema, temperature, topP, topK, language),
     priority
   );
 }
