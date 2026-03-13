@@ -87,9 +87,13 @@ export async function generateLLMText(
 
   return withResilienceTracking(() => retryWithBackoff(async () => {
     try {
+      const languageInstruction = "\n\nIMPORTANT: Respond in the SAME LANGUAGE as the user input (e.g., if the user premise/prompt is in Russian, respond in Russian). All narrative, dialogue, and descriptions must match the input language.";
+      
       const messages: any[] = [];
       if (systemInstruction) {
-        messages.push({ role: "system", content: systemInstruction });
+        messages.push({ role: "system", content: systemInstruction + languageInstruction });
+      } else {
+        messages.push({ role: "system", content: "You are a professional novelist." + languageInstruction });
       }
       messages.push({ role: "user", content: prompt });
 
@@ -159,9 +163,13 @@ export async function generateLLMTextStream(
 
   return retryWithBackoff(async () => {
     try {
+      const languageInstruction = "\n\nIMPORTANT: Respond in the SAME LANGUAGE as the user input (e.g., if the user premise/prompt is in Russian, respond in Russian). All narrative, dialogue, and descriptions must match the input language.";
+
       const messages: any[] = [];
       if (systemInstruction) {
-        messages.push({ role: "system", content: systemInstruction });
+        messages.push({ role: "system", content: systemInstruction + languageInstruction });
+      } else {
+        messages.push({ role: "system", content: "You are a professional novelist." + languageInstruction });
       }
       messages.push({ role: "user", content: prompt });
 
