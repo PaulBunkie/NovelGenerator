@@ -3,7 +3,7 @@
  * This is the last editing step before compilation
  */
 
-import { generateGeminiText } from '../services/geminiService';
+import { generateLLMText } from '../services/llmService';
 import { ChapterData, AgentLogEntry } from '../types';
 
 export interface ProfessionalPolishResult {
@@ -186,7 +186,7 @@ Polished version of the chapter. Only chapter text, no comments.`;
   const systemPrompt = `You are a master editor specializing in final polish of fiction. Your task is to transform good text into professional novel through work with rhythm, subtext, emotional anchors, and layers of perception.`;
 
   try {
-    const polished = await generateGeminiText(
+    const polished = await generateLLMText(
       polishPrompt,
       systemPrompt,
       undefined,

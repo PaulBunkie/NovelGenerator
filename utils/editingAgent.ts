@@ -4,7 +4,7 @@
  * This agent uses a multi-step reasoning process to analyze and improve chapters
  */
 
-import { generateGeminiText } from '../services/geminiService';
+import { generateLLMText } from '../services/llmService';
 import { ParsedChapterPlan, AgentLogEntry } from '../types';
 import { getFormattedPrompt, PromptNames } from './promptLoader';
 
@@ -87,7 +87,7 @@ export async function analyzeAndDecide(context: EditingContext): Promise<AgentDe
       required: ['strategy', 'reasoning', 'priority', 'estimatedChanges', 'confidence']
     };
     
-    const response = await generateGeminiText(analysisPrompt, systemPrompt, responseSchema, 0.3, 0.7, 20);
+    const response = await generateLLMText(analysisPrompt, systemPrompt, responseSchema, 0.3, 0.7, 20);
     const decision = JSON.parse(response);
     
     // Log decision
@@ -162,7 +162,7 @@ function fallbackDecision(context: EditingContext): AgentDecision {
 export async function executeStrategy(
   context: EditingContext,
   decision: AgentDecision,
-  generateText: typeof generateGeminiText
+  generateText: typeof generateLLMText
 ): Promise<string> {
   
   const originalContent = context.chapterContent;
@@ -231,7 +231,7 @@ function logDiff(context: EditingContext, before: string, after: string, strateg
  */
 async function executeTargetedEdit(
   context: EditingContext,
-  generateText: typeof generateGeminiText
+  generateText: typeof generateLLMText
 ): Promise<string> {
   
   const { systemPrompt, userPrompt: prompt } = getFormattedPrompt(PromptNames.EDITING_AGENT_TARGETED, {
@@ -247,7 +247,7 @@ async function executeTargetedEdit(
  */
 async function executeRegeneration(
   context: EditingContext,
-  generateText: typeof generateGeminiText
+  generateText: typeof generateLLMText
 ): Promise<string> {
   
   const { systemPrompt, userPrompt: prompt } = getFormattedPrompt(PromptNames.EDITING_AGENT_REGENERATE, {
@@ -269,7 +269,7 @@ async function executeRegeneration(
  */
 async function executePolish(
   context: EditingContext,
-  generateText: typeof generateGeminiText
+  generateText: typeof generateLLMText
 ): Promise<string> {
   
   const { systemPrompt, userPrompt: prompt } = getFormattedPrompt(PromptNames.EDITING_AGENT_POLISH, {
@@ -290,7 +290,7 @@ export async function evaluateResult(
   original: string,
   refined: string,
   context: EditingContext,
-  generateText: typeof generateGeminiText
+  generateText: typeof generateLLMText
 ): Promise<{ qualityScore: number; changesApplied: string[] }> {
   
   const { systemPrompt: evaluationSystemPrompt, userPrompt: evaluationPrompt } = getFormattedPrompt(PromptNames.EDITING_AGENT_EVALUATION, {
@@ -341,7 +341,7 @@ export async function evaluateResult(
  */
 export async function agentEditChapter(
   context: EditingContext,
-  generateText: typeof generateGeminiText
+  generateText: typeof generateLLMText
 ): Promise<EditingResult> {
   
   log(context, 'iteration', `Agent starting work on Chapter ${context.chapterNumber}`);

@@ -11,6 +11,10 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
+        'process.env.OPENROUTER_API_KEY': JSON.stringify(env.OPENROUTER_API_KEY),
+        'process.env.OPENROUTER_MODEL': JSON.stringify(env.OPENROUTER_MODEL),
+        'process.env.SITE_URL': JSON.stringify(env.SITE_URL),
+        'process.env.SITE_NAME': JSON.stringify(env.SITE_NAME),
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },

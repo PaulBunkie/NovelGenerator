@@ -1,3 +1,12 @@
+export enum SchemaType {
+  OBJECT = "OBJECT",
+  ARRAY = "ARRAY",
+  STRING = "STRING",
+  INTEGER = "INTEGER",
+  NUMBER = "NUMBER",
+  BOOLEAN = "BOOLEAN"
+}
+
 export interface Character {
   name: string;
   description: string;

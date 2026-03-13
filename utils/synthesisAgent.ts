@@ -2,7 +2,7 @@
  * Synthesis Agent - Integration specialist for combining specialist agent outputs
  */
 
-import { generateGeminiText } from '../services/geminiService';
+import { generateLLMText } from '../services/llmService';
 import { StructureAgentOutput, CharacterAgentOutput, SceneAgentOutput } from './specialistAgents';
 
 // =================== INTERFACES ===================
@@ -218,7 +218,7 @@ export class SynthesisAgent {
     const transitionPrompt = this.buildTransitionPrompt(mappings, input);
 
     try {
-      const transitionsContent = await generateGeminiText(
+      const transitionsContent = await generateLLMText(
         transitionPrompt.userPrompt,
         transitionPrompt.systemPrompt,
         undefined,
@@ -326,7 +326,7 @@ Generate transitions now:`;
     const integrationPrompt = this.buildIntegrationPrompt(structureTemplate, mappings, transitions);
 
     try {
-      const integratedContent = await generateGeminiText(
+      const integratedContent = await generateLLMText(
         integrationPrompt.userPrompt,
         integrationPrompt.systemPrompt,
         undefined,

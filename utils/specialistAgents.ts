@@ -3,7 +3,7 @@
  * Specialized agents for different aspects of chapter generation
  */
 
-import { generateGeminiText } from '../services/geminiService';
+import { generateLLMText } from '../services/llmService';
 import { ParsedChapterPlan } from '../types';
 import { StructureContext, CharacterContext, SceneContext, CoherenceConstraints } from './coherenceManager';
 import { getFormattedPrompt, PromptNames, formatPrompt } from './promptLoader';
@@ -60,7 +60,7 @@ export class StructureAgent {
     console.log(`🏗️ Structure Agent generating framework for Chapter ${input.chapterNumber}`);
 
     const prompt = this.buildStructurePrompt(input);
-    const structureContent = await generateGeminiText(
+    const structureContent = await generateLLMText(
       prompt.userPrompt,
       prompt.systemPrompt,
       undefined, // No JSON schema needed for structure
@@ -364,7 +364,7 @@ export class CharacterAgent {
     console.log(`👥 Character Agent generating dialogue and development for Chapter ${input.chapterNumber}`);
 
     const prompt = this.buildCharacterPrompt(input);
-    const characterContent = await generateGeminiText(
+    const characterContent = await generateLLMText(
       prompt.userPrompt,
       prompt.systemPrompt,
       undefined,
@@ -902,7 +902,7 @@ export class SceneAgent {
     console.log(`🎬 Scene Agent generating atmosphere and action for Chapter ${input.chapterNumber}`);
 
     const prompt = this.buildScenePrompt(input);
-    const sceneContent = await generateGeminiText(
+    const sceneContent = await generateLLMText(
       prompt.userPrompt,
       prompt.systemPrompt,
       undefined,

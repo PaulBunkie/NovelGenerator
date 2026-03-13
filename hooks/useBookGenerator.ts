@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Character, ChapterData, GenerationStep, ParsedChapterPlan, TimelineEntry, EmotionalArcEntry, StorySettings, AgentLogEntry, ChapterGenerationStage } from '../types';
-import { generateGeminiText, generateGeminiTextStream } from '../services/geminiService';
+import { Character, ChapterData, GenerationStep, ParsedChapterPlan, TimelineEntry, EmotionalArcEntry, StorySettings, AgentLogEntry, ChapterGenerationStage, SchemaType } from '../types';
+import { generateLLMText, generateLLMTextStream } from '../services/llmService';
 import { extractCharactersFromString, extractWorldNameFromString, extractMotifsFromString } from '../utils/parserUtils';
 import { getWritingExamplesPrompt } from '../utils/writingExamples';
 import { checkChapterConsistency } from '../utils/consistencyChecker';
@@ -13,9 +13,8 @@ import { applyProfessionalPolish } from '../utils/professionalPolishAgent';
 import { agentCoordinator, ChapterGenerationInput } from '../utils/agentCoordinator';
 import { playSuccessSound, playNotificationSound } from '../utils/soundUtils';
 import { getFormattedPrompt, PromptNames, formatPrompt } from '../utils/promptLoader';
-import { GEMINI_MODEL_NAME } from '../constants';
+import { MODEL_NAME } from '../constants';
 import { OUTLINE_PARAMS, CHAPTER_CONTENT_PARAMS, ANALYSIS_PARAMS, EDITING_PARAMS, EXTRACTION_PARAMS, TITLE_PARAMS } from '../constants/generationParams';
-import { SchemaType } from '@google/generative-ai';
 
 const STORAGE_KEY = 'novelGeneratorState';
 
@@ -549,7 +548,7 @@ const useBookGenerator = () => {
       chapters_count: chaptersCount,
       story_premise: premise
     });
-    const outlineText = await generateGeminiText(userPrompt, systemPrompt, undefined, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
+    const outlineText = await generateLLMText(userPrompt, systemPrompt, undefined, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
     if (!outlineText) throw new Error("Failed to generate story outline.");
     setCurrentStoryOutline(outlineText);
     setCurrentStep(GenerationStep.WaitingForOutlineApproval);
@@ -582,7 +581,7 @@ const useBookGenerator = () => {
         if (needsCharacters) {
           extractionPromises.push(
             extractCharactersFromString(outlineText, (prompt, system) => 
-              generateGeminiText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
+              generateLLMText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
             ).then(result => ({ type: 'characters', data: result }))
           );
         }
@@ -590,7 +589,7 @@ const useBookGenerator = () => {
         if (needsWorldName) {
           extractionPromises.push(
             extractWorldNameFromString(outlineText, (prompt, system) => 
-              generateGeminiText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
+              generateLLMText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
             ).then(result => ({ type: 'worldName', data: result }))
           );
         }
@@ -598,7 +597,7 @@ const useBookGenerator = () => {
         if (needsMotifs) {
           extractionPromises.push(
             extractMotifsFromString(outlineText, (prompt, system) => 
-              generateGeminiText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
+              generateLLMText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
             ).then(result => ({ type: 'motifs', data: result }))
           );
         }
@@ -644,7 +643,7 @@ const useBookGenerator = () => {
               // Use optimized schema by default - faster and more reliable
               console.log(`📝 Generating chapter plan with optimized schema (attempt ${attempt}/${maxPlanRetries})...`);
               const chapterPlanSchema: object = createOptimizedChapterPlanSchema(numChapters);
-              jsonString = await generateGeminiText(chapterPlanPrompt, systemPromptPlan, chapterPlanSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
+              jsonString = await generateLLMText(chapterPlanPrompt, systemPromptPlan, chapterPlanSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
               console.log('✅ Received chapter plan response with optimized schema');
               
               // Try to parse and validate
@@ -674,7 +673,7 @@ const useBookGenerator = () => {
                 console.log('📝 Final attempt with full expanded schema...');
                 try {
                   const expandedSchema: object = createExpandedChapterPlanSchema(numChapters);
-                  jsonString = await generateGeminiText(chapterPlanPrompt, systemPromptPlan, expandedSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
+                  jsonString = await generateLLMText(chapterPlanPrompt, systemPromptPlan, expandedSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
                   schemaUsed = 'expanded';
                   console.log('✅ Received chapter plan response with expanded schema');
                   
@@ -956,7 +955,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
           chapter_title: plannedTitle,
           chapter_content: chapterContent
         });
-        const analysisJsonString = await generateGeminiText(analysisPrompt, systemPromptAnalyzer, analysisSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK);
+        const analysisJsonString = await generateLLMText(analysisPrompt, systemPromptAnalyzer, analysisSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK);
         
         let analysisResult;
         try {
@@ -981,7 +980,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
               chapter_title: plannedTitle,
               chapter_content_preview: chapterContent.substring(0, 6000) + (chapterContent.length > 6000 ? '...(content continues)' : '')
             });
-            critiqueNotes = await generateGeminiText(selfCritiquePrompt, systemPromptCritic, undefined, 0.4, 0.7, 20);
+            critiqueNotes = await generateLLMText(selfCritiquePrompt, systemPromptCritic, undefined, 0.4, 0.7, 20);
 
             // Light polish using existing editing agent in light mode
             const agentResult = await agentEditChapter(
@@ -995,7 +994,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
                         setAgentLogs(prev => [...prev, entry]);
                     }
                 },
-                generateGeminiText
+                generateLLMText
             );
 
             refinedChapterContent = agentResult.refinedContent;
@@ -1035,7 +1034,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
                 charactersRef.current,
                 previousChaptersSummaryText,
                 worldName,
-                generateGeminiText
+                generateLLMText
             );
             
             // ✅ SAVE: After consistency check
@@ -1068,7 +1067,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
         });
 
         try {
-            const characterUpdateJsonString = await generateGeminiText(characterUpdatePrompt, systemPromptUpdater, characterUpdateSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK);
+            const characterUpdateJsonString = await generateLLMText(characterUpdatePrompt, systemPromptUpdater, characterUpdateSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK);
             const characterUpdateData = JSON.parse(characterUpdateJsonString);
             if (characterUpdateData && characterUpdateData.character_updates) {
                 for (const update of characterUpdateData.character_updates) {
@@ -1195,7 +1194,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
           end_of_chapter_a: endOfChapterA,
           start_of_chapter_b: startOfChapterB
         });
-        const refinedEnding = await generateGeminiText(transitionPrompt, systemPromptEditor, undefined, EDITING_PARAMS.temperature, EDITING_PARAMS.topP, EDITING_PARAMS.topK);
+        const refinedEnding = await generateLLMText(transitionPrompt, systemPromptEditor, undefined, EDITING_PARAMS.temperature, EDITING_PARAMS.topP, EDITING_PARAMS.topK);
         if (refinedEnding) {
             chaptersForCompilation[i].content = chapterA_content.slice(0, -1500) + (refinedEnding || '').trim();
         }
@@ -1209,7 +1208,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
         const { systemPrompt: titleSystemPrompt, userPrompt: titlePrompt } = getFormattedPrompt(PromptNames.TITLE_GENERATION, {
           story_premise: storyPremise
         });
-        let bookTitle = await generateGeminiText(titlePrompt, titleSystemPrompt, undefined, TITLE_PARAMS.temperature, TITLE_PARAMS.topP, TITLE_PARAMS.topK);
+        let bookTitle = await generateLLMText(titlePrompt, titleSystemPrompt, undefined, TITLE_PARAMS.temperature, TITLE_PARAMS.topP, TITLE_PARAMS.topK);
         bookTitle = (bookTitle || '').trim().replace(/^"|"$/g, '').replace(/#|Title:/g, '').trim() || `A Novel: ${storyPremise.substring(0, 30)}...`;
 
         let fullBookText = `# ${bookTitle}\n\n`;

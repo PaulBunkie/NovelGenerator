@@ -1,5 +1,5 @@
 import { Character } from '../types';
-import { generateGeminiText } from '../services/geminiService';
+import { generateLLMText } from '../services/llmService';
 
 
 // Helper for Python-like re.findall for specific character pattern
@@ -15,7 +15,7 @@ function findCharacterMatches(text: string): Array<[string, string]> {
 
 export async function extractCharactersFromString(
   outlineText: string, 
-  llmFallback: typeof generateGeminiText
+  llmFallback: typeof generateLLMText
 ): Promise<Record<string, Character>> {
   const characters: Record<string, Character> = {};
   
@@ -68,7 +68,7 @@ Include protagonist, antagonist, and key supporting characters.`;
 
 export async function extractWorldNameFromString(
   outlineText: string,
-  llmFallback: typeof generateGeminiText
+  llmFallback: typeof generateLLMText
 ): Promise<string> {
   const patterns = [
     /Neo-[A-Za-z]+/g,
@@ -114,7 +114,7 @@ Reply with ONLY the world name, nothing else.`;
 
 export async function extractMotifsFromString(
   outlineText: string,
-  llmFallback: typeof generateGeminiText
+  llmFallback: typeof generateLLMText
 ): Promise<string[]> {
   const motifMatch = outlineText.match(/RECURRING MOTIFS\/THEMES\s*\n(.*?)(?=\n\n[A-Z\s]+:|$)/is);
   if (motifMatch && motifMatch[1]) {
