@@ -106,7 +106,14 @@ export async function generateLLMText(
         messages[messages.length - 1].content += `\n\nIMPORTANT: You must return valid JSON that matches this schema: ${JSON.stringify(responseSchema)}`;
       }
 
-      console.log(`🔄 Sending request to OpenRouter API (model: ${MODEL_NAME})...`);
+      console.log(`🔄 Sending request to OpenRouter API...
+        Model: ${MODEL_NAME}
+        Temperature: ${temperature ?? 0.7}
+        Prompt length: ${prompt.length} chars
+        System instruction: ${systemInstruction ? 'Yes' : 'No'}
+        Response Schema: ${responseSchema ? 'Yes' : 'No'}`);
+
+      const startTime = Date.now();
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -125,7 +132,12 @@ export async function generateLLMText(
 
       const data = await response.json();
       const text = data.choices[0]?.message?.content || '';
-      console.log(`✅ Received response from OpenRouter API (${text.length} chars)`);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`✅ Received response from OpenRouter API:
+        Duration: ${duration}s
+        Response length: ${text.length} chars
+        Model: ${data.model || MODEL_NAME}
+        Tokens: ${data.usage?.total_tokens || 'unknown'}`);
       return text;
     } catch (error) {
       throw handleApiError(error);
@@ -153,6 +165,11 @@ export async function generateLLMTextStream(
       }
       messages.push({ role: "user", content: prompt });
 
+      console.log(`🔄 Starting stream from OpenRouter API...
+        Model: ${MODEL_NAME}
+        Prompt length: ${prompt.length} chars`);
+
+      const startTime = Date.now();
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -207,6 +224,10 @@ export async function generateLLMTextStream(
         }
       }
 
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`✅ Stream complete:
+        Duration: ${duration}s
+        Total length: ${fullText.length} chars`);
       return fullText;
     } catch (error) {
       throw handleApiError(error);
