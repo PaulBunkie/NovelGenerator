@@ -127,6 +127,8 @@ export async function generateLLMText(
         Prompt length: ${prompt.length} chars
         System instruction: ${systemInstruction ? 'Yes' : 'No'}
         Response Schema: ${responseSchema ? 'Yes' : 'No'}`);
+      
+      console.log('📡 FULL REQUEST MESSAGES:', JSON.stringify(messages, null, 2));
 
       const startTime = Date.now();
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -191,6 +193,8 @@ export async function generateLLMTextStream(
         Model: ${MODEL_NAME}
         Language: ${selectedLanguage}
         Prompt length: ${prompt.length} chars`);
+      
+      console.log('📡 FULL STREAM REQUEST MESSAGES:', JSON.stringify(messages, null, 2));
 
       const startTime = Date.now();
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
