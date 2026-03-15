@@ -10,10 +10,11 @@ import { getSceneDialogueGuidelines } from '../utils/dialogueSystem';
 import { agentEditChapter } from '../utils/editingAgent';
 import { performFinalEditingPass, shouldPerformFinalPass } from '../utils/finalEditingPass';
 import { applyProfessionalPolish } from '../utils/professionalPolishAgent';
+import { applyRealismCheck } from '../utils/realismAgent';
 import { agentCoordinator, ChapterGenerationInput } from '../utils/agentCoordinator';
 import { playSuccessSound, playNotificationSound } from '../utils/soundUtils';
 import { getFormattedPrompt, PromptNames, formatPrompt } from '../utils/promptLoader';
-import { MODEL_NAME } from '../constants';
+import { MODELS, MIN_CHAPTERS } from '../constants';
 import { OUTLINE_PARAMS, CHAPTER_CONTENT_PARAMS, ANALYSIS_PARAMS, EDITING_PARAMS, EXTRACTION_PARAMS, TITLE_PARAMS } from '../constants/generationParams';
 
 const STORAGE_KEY = 'novelGeneratorState';
@@ -395,7 +396,8 @@ const useBookGenerator = () => {
       temperature,
       topP,
       topK,
-      storySettings.language || 'English'
+      storySettings.language || 'English',
+      MODELS.WRITING // Default for general text in generator
     );
   }, [storySettings.language]);
 
@@ -414,7 +416,8 @@ const useBookGenerator = () => {
       temperature,
       topP,
       topK,
-      storySettings.language || 'English'
+      storySettings.language || 'English',
+      MODELS.WRITING
     );
   }, [storySettings.language]);
 
@@ -598,7 +601,7 @@ const useBookGenerator = () => {
       chapters_count: chaptersCount,
       story_premise: premise
     });
-    const outlineText = await generateText(userPrompt, systemPrompt, undefined, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
+    const outlineText = await generateLLMText(userPrompt, systemPrompt, undefined, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK, storySettings.language || 'English', MODELS.OUTLINE);
     if (!outlineText) throw new Error("Failed to generate story outline.");
     setCurrentStoryOutline(outlineText);
     setCurrentStep(GenerationStep.WaitingForOutlineApproval);
@@ -631,7 +634,7 @@ const useBookGenerator = () => {
         if (needsCharacters) {
           extractionPromises.push(
             extractCharactersFromString(outlineText, (prompt, system) => 
-              generateText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
+              generateLLMText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK, storySettings.language || 'English', MODELS.ANALYSIS)
             ).then(result => ({ type: 'characters', data: result }))
           );
         }
@@ -639,7 +642,7 @@ const useBookGenerator = () => {
         if (needsWorldName) {
           extractionPromises.push(
             extractWorldNameFromString(outlineText, (prompt, system) => 
-              generateText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
+              generateLLMText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK, storySettings.language || 'English', MODELS.ANALYSIS)
             ).then(result => ({ type: 'worldName', data: result }))
           );
         }
@@ -647,7 +650,7 @@ const useBookGenerator = () => {
         if (needsMotifs) {
           extractionPromises.push(
             extractMotifsFromString(outlineText, (prompt, system) => 
-              generateText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK)
+              generateLLMText(prompt, system, undefined, EXTRACTION_PARAMS.temperature, EXTRACTION_PARAMS.topP, EXTRACTION_PARAMS.topK, storySettings.language || 'English', MODELS.ANALYSIS)
             ).then(result => ({ type: 'motifs', data: result }))
           );
         }
@@ -693,7 +696,7 @@ const useBookGenerator = () => {
               // Use optimized schema by default - faster and more reliable
               console.log(`📝 Generating chapter plan with optimized schema (attempt ${attempt}/${maxPlanRetries})...`);
               const chapterPlanSchema: object = createOptimizedChapterPlanSchema(numChapters);
-              jsonString = await generateText(chapterPlanPrompt, systemPromptPlan, chapterPlanSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
+              jsonString = await generateLLMText(chapterPlanPrompt, systemPromptPlan, chapterPlanSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK, storySettings.language || 'English', MODELS.PLANNING);
               console.log('✅ Received chapter plan response with optimized schema');
               
               // Try to parse and validate
@@ -723,7 +726,7 @@ const useBookGenerator = () => {
                 console.log('📝 Final attempt with full expanded schema...');
                 try {
                   const expandedSchema: object = createExpandedChapterPlanSchema(numChapters);
-                  jsonString = await generateText(chapterPlanPrompt, systemPromptPlan, expandedSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK);
+                  jsonString = await generateLLMText(chapterPlanPrompt, systemPromptPlan, expandedSchema, OUTLINE_PARAMS.temperature, OUTLINE_PARAMS.topP, OUTLINE_PARAMS.topK, storySettings.language || 'English', MODELS.PLANNING);
                   schemaUsed = 'expanded';
                   console.log('✅ Received chapter plan response with expanded schema');
                   
@@ -968,8 +971,27 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
         const chapterContent = hybridResult.chapterData.content;
         if (!chapterContent) throw new Error(`Failed to generate content for Chapter ${i}.`);
 
-        // ✅ SAVE: First draft after hybrid generation
-        _saveChapterDraft(i - 1, chapterContent, ChapterGenerationStage.FirstDraft, {
+        // 🚀 REALISM & LOGIC CHECK
+        let realismCheckedContent = chapterContent;
+        try {
+          console.log(`🔍 Starting realism and logic check for Chapter ${i}...`);
+          const realismResult = await applyRealismCheck(chapterContent, i, storySettings.language || 'English', (entry) => {
+            setAgentLogs(prev => [...prev, entry]);
+          });
+          realismCheckedContent = realismResult.refinedContent;
+          
+          // ✅ SAVE: After realism check
+          _saveChapterDraft(i - 1, realismCheckedContent, ChapterGenerationStage.RealismCheck, {
+            title: plannedTitle,
+            plan: thisChapterPlanText
+          });
+        } catch (e) {
+          console.warn(`Realism check failed for chapter ${i}, using original content. Error:`, e);
+          realismCheckedContent = chapterContent;
+        }
+
+        // ✅ SAVE: First draft after hybrid generation and realism check
+        _saveChapterDraft(i - 1, realismCheckedContent, ChapterGenerationStage.FirstDraft, {
           title: plannedTitle,
           plan: thisChapterPlanText
         });
@@ -1005,7 +1027,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
           chapter_title: plannedTitle,
           chapter_content: chapterContent
         });
-        const analysisJsonString = await generateText(analysisPrompt, systemPromptAnalyzer, analysisSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK);
+        const analysisJsonString = await generateLLMText(analysisPrompt, systemPromptAnalyzer, analysisSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK, storySettings.language || 'English', MODELS.ANALYSIS);
         
         let analysisResult;
         try {
@@ -1018,7 +1040,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
 
         // 🎨 LIGHT POLISH PASS (Hybrid System)
         // Since specialist agents already created quality content, we only need minimal refinement
-        let refinedChapterContent = chapterContent;
+        let refinedChapterContent = realismCheckedContent;
         let critiqueNotes = "";
 
         try {
@@ -1028,14 +1050,14 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
             const { systemPrompt: systemPromptCritic, userPrompt: selfCritiquePrompt } = getFormattedPrompt(PromptNames.SELF_CRITIQUE, {
               chapter_number: i,
               chapter_title: plannedTitle,
-              chapter_content_preview: chapterContent.substring(0, 6000) + (chapterContent.length > 6000 ? '...(content continues)' : '')
+              chapter_content_preview: realismCheckedContent.substring(0, 6000) + (realismCheckedContent.length > 6000 ? '...(content continues)' : '')
             });
-            critiqueNotes = await generateText(selfCritiquePrompt, systemPromptCritic, undefined, 0.4, 0.7, 20);
+            critiqueNotes = await generateLLMText(selfCritiquePrompt, systemPromptCritic, undefined, 0.4, 0.7, 20, storySettings.language || 'English', MODELS.POLISH);
 
             // Light polish using existing editing agent in light mode
             const agentResult = await agentEditChapter(
                 {
-                    chapterContent,
+                    chapterContent: realismCheckedContent,
                     chapterPlan: thisChapterPlanObject,
                     chapterPlanText: thisChapterPlanText,
                     critiqueNotes: `HYBRID SYSTEM LIGHT POLISH: Specialist agents already created this content. Only apply minimal improvements. ${critiqueNotes}`,
@@ -1068,8 +1090,8 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
             });
 
         } catch (e) {
-            console.warn(`Light polish failed for chapter ${i}, using hybrid content. Error:`, e);
-            refinedChapterContent = chapterContent; // Use hybrid content as-is
+            console.warn(`Light polish failed for chapter ${i}, using realism-checked content. Error:`, e);
+            refinedChapterContent = realismCheckedContent; // Use realism-checked content as-is
         }
         
         // Note: Specialized editing passes (dialogue, action, description) are available in utils/specializedEditors.ts
@@ -1117,7 +1139,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
         });
 
         try {
-            const characterUpdateJsonString = await generateText(characterUpdatePrompt, systemPromptUpdater, characterUpdateSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK);
+            const characterUpdateJsonString = await generateLLMText(characterUpdatePrompt, systemPromptUpdater, characterUpdateSchema, ANALYSIS_PARAMS.temperature, ANALYSIS_PARAMS.topP, ANALYSIS_PARAMS.topK, storySettings.language || 'English', MODELS.ANALYSIS);
             const characterUpdateData = JSON.parse(characterUpdateJsonString);
             if (characterUpdateData && characterUpdateData.character_updates) {
                 for (const update of characterUpdateData.character_updates) {
@@ -1244,7 +1266,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
           end_of_chapter_a: endOfChapterA,
           start_of_chapter_b: startOfChapterB
         });
-        const refinedEnding = await generateText(transitionPrompt, systemPromptEditor, undefined, EDITING_PARAMS.temperature, EDITING_PARAMS.topP, EDITING_PARAMS.topK);
+        const refinedEnding = await generateLLMText(transitionPrompt, systemPromptEditor, undefined, EDITING_PARAMS.temperature, EDITING_PARAMS.topP, EDITING_PARAMS.topK, storySettings.language || 'English', MODELS.POLISH);
         if (refinedEnding) {
             chaptersForCompilation[i].content = chapterA_content.slice(0, -1500) + (refinedEnding || '').trim();
         }
@@ -1258,7 +1280,7 @@ ${formatArrayField(thisChapterPlanObject.callbacks, 'Callbacks')}
         const { systemPrompt: titleSystemPrompt, userPrompt: titlePrompt } = getFormattedPrompt(PromptNames.TITLE_GENERATION, {
           story_premise: storyPremise
         });
-        let bookTitle = await generateText(titlePrompt, titleSystemPrompt, undefined, TITLE_PARAMS.temperature, TITLE_PARAMS.topP, TITLE_PARAMS.topK);
+        let bookTitle = await generateLLMText(titlePrompt, titleSystemPrompt, undefined, TITLE_PARAMS.temperature, TITLE_PARAMS.topP, TITLE_PARAMS.topK, storySettings.language || 'English', MODELS.OUTLINE);
         bookTitle = (bookTitle || '').trim().replace(/^"|"$/g, '').replace(/#|Title:/g, '').trim() || `A Novel: ${storyPremise.substring(0, 30)}...`;
 
         let fullBookText = `# ${bookTitle}\n\n`;

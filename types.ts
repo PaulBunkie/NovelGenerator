@@ -25,6 +25,7 @@ export enum ChapterGenerationStage {
   CharacterGeneration = "character_generation", 
   SceneGeneration = "scene_generation",
   Synthesis = "synthesis",
+  RealismCheck = "realism_check",
   FirstDraft = "first_draft",
   LightPolish = "light_polish",
   ConsistencyCheck = "consistency_check",

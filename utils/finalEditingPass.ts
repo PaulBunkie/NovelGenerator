@@ -3,6 +3,7 @@
  * This runs after all chapters are generated and individually edited
  */
 
+import { MODELS } from '../constants';
 import { generateLLMText } from '../services/llmService';
 import { ParsedChapterPlan, AgentLogEntry, ChapterData } from '../types';
 import { agentEditChapter, EditingContext } from './editingAgent';
@@ -173,7 +174,7 @@ Remember: This is the FINAL PASS. Only flag issues worth fixing.`;
   const systemPrompt = "You are a senior editor performing final quality control before publication.";
   
   try {
-    const critique = await generateLLMText(critiquePrompt, systemPrompt, undefined, 0.4, 0.7, 20);
+    const critique = await generateLLMText(critiquePrompt, systemPrompt, undefined, 0.4, 0.7, 20, undefined, MODELS.POLISH);
     return critique;
   } catch (e) {
     console.warn(`Failed to generate final critique for chapter ${chapterNumber}:`, e);

@@ -81,5 +81,6 @@ export enum PromptNames {
   STRUCTURE_AGENT = 'structure-agent',
   CHARACTER_AGENT = 'character-agent',
   SCENE_AGENT = 'scene-agent',
-  SYNTHESIS_AGENT = 'synthesis-agent'
+  SYNTHESIS_AGENT = 'synthesis-agent',
+  REALISM_CHECK = 'realism-check'
 }

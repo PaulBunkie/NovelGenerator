@@ -1,5 +1,6 @@
 import { Character } from '../types';
 import { getFormattedPrompt, PromptNames } from './promptLoader';
+import { MODELS } from '../constants';
 
 /**
  * Consistency checker for maintaining story coherence across chapters
@@ -27,7 +28,7 @@ export async function checkChapterConsistency(
   characters: Record<string, Character>,
   previousChaptersSummaries: string,
   worldName: string,
-  llmFunction: (prompt: string, system: string, schema?: object, temp?: number, topP?: number, topK?: number) => Promise<string>
+  llmFunction: (prompt: string, system: string, schema?: object, temp?: number, topP?: number, topK?: number, language?: string, model?: string) => Promise<string>
 ): Promise<ConsistencyCheckResult> {
   
   const characterNames = Object.keys(characters);
@@ -44,7 +45,7 @@ export async function checkChapterConsistency(
   });
 
   try {
-    const response = await llmFunction(consistencyPrompt, systemPrompt, undefined, 0.2, 0.6, 10);
+    const response = await llmFunction(consistencyPrompt, systemPrompt, undefined, 0.2, 0.6, 10, undefined, MODELS.ANALYSIS);
     
     // Parse response
     const issues: ConsistencyIssue[] = [];

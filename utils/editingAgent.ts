@@ -4,6 +4,7 @@
  * This agent uses a multi-step reasoning process to analyze and improve chapters
  */
 
+import { MODELS } from '../constants';
 import { generateLLMText } from '../services/llmService';
 import { ParsedChapterPlan, AgentLogEntry } from '../types';
 import { getFormattedPrompt, PromptNames } from './promptLoader';
@@ -87,7 +88,7 @@ export async function analyzeAndDecide(context: EditingContext): Promise<AgentDe
       required: ['strategy', 'reasoning', 'priority', 'estimatedChanges', 'confidence']
     };
     
-    const response = await generateLLMText(analysisPrompt, systemPrompt, responseSchema, 0.3, 0.7, 20);
+    const response = await generateLLMText(analysisPrompt, systemPrompt, responseSchema, 0.3, 0.7, 20, undefined, MODELS.POLISH);
     const decision = JSON.parse(response);
     
     // Log decision

@@ -465,24 +465,24 @@ Return polished chapter that feels human-written, not AI-generated.`
 
 **EVALUATE (0-100 TOTAL):**
 
-**1. PLAN ELEMENTS PRESENT (0-25 points):**
+1. **PLAN ELEMENTS PRESENT (0-25 points):**
 - Moral dilemma clearly shown and central to chapter
 - Character complexity/contradictions demonstrated
 - Consequences of choices visible
 
-**2. PROSE QUALITY (0-25 points):**
+2. **PROSE QUALITY (0-25 points):**
 - Show don't tell, economical language
 - Strong verbs, minimal adverbs
 - Varied sentence lengths and rhythms
 
-**3. HUMAN-LIKE WRITING (0-25 points):**
+3. **HUMAN-LIKE WRITING (0-25 points):**
 - Does NOT feel AI-generated
 - Includes mundane details/imperfections
 - Natural dialogue with interruptions/subtext
 - Characters have random thoughts/observations
 - Emotional descriptions are nuanced, not extreme
 
-**4. NARRATIVE EFFECTIVENESS (0-25 points):**
+4. **NARRATIVE EFFECTIVENESS (0-25 points):**
 - Compelling pacing and flow
 - Characters feel real and complex
 - Chapter advances plot meaningfully
@@ -827,5 +827,39 @@ Address integration issues while preserving specialist quality:
 - Random thoughts: max 1 per chapter, only during dissociation
 
 Return the fully integrated chapter with minimal changes to specialist content.`
+  });
+
+  registerPromptTemplate(PromptNames.REALISM_CHECK, {
+    systemPrompt: `Вы — эксперт по реализму в художественной литературе, технический консультант и фактчекер. Ваша задача — находить и исправлять физические, логические, технические и бытовые нестыковки в тексте.`,
+    userPrompt: `Проанализируй художественный текст и исправь все ошибки реализма. Проверь текст по следующим уровням:
+— физическая реализуемость действий
+— устройство предметов (замки, автомобили, оружие, техника)
+— фактическая точность (география, должности, названия)
+— бытовая и культурная правдоподобность среды
+— технологическая реалистичность
+— причинно-следственная логика сцены
+— скрытые абсурды (формально возможные, но нелепые ситуации)
+— временную правдоподобность действий
+— пространственную логичность сцены (кто где находится и что может видеть)
+
+Исправь:
+• физически невозможные действия
+• неправдоподобные детали
+• ошибки в устройстве техники
+• нелогичное поведение персонажей
+• скрытые абсурды
+• пропущенные промежуточные действия
+• неестественные формулировки
+
+ВАЖНО:
+— сохраняй стиль, атмосферу и сюжет
+— исправляй только проблемные места
+— не упрощай текст
+— не сокращай сцену
+
+Ответ выдай ТОЛЬКО в виде полностью исправленного текста. Без объяснений. Без комментариев. Без списка ошибок.
+
+ТЕКСТ:
+{{chapter_content}}`
   });
 }

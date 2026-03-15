@@ -1,4 +1,4 @@
-import { MODEL_NAME } from '../constants';
+import { DEFAULT_MODEL } from '../constants';
 import { withResilienceTracking } from '../utils/apiResilienceUtils';
 
 declare const process: {
@@ -85,12 +85,14 @@ export async function generateLLMText(
   temperature?: number,
   topP?: number,
   topK?: number,
-  language?: string
+  language?: string,
+  model?: string
 ): Promise<string> {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenRouter API key is not initialized. OPENROUTER_API_KEY is missing.");
   }
 
+  const selectedModel = model || DEFAULT_MODEL;
   const selectedLanguage = language || globalLanguage;
   const maxRetries = responseSchema ? 7 : 5;
   const baseDelay = responseSchema ? 3000 : 2000;
@@ -108,7 +110,7 @@ export async function generateLLMText(
       messages.push({ role: "user", content: prompt });
 
       const body: any = {
-        model: MODEL_NAME,
+        model: selectedModel,
         messages,
         temperature: temperature ?? 0.7,
         top_p: topP ?? 1,
@@ -121,7 +123,7 @@ export async function generateLLMText(
       }
 
       console.log(`🔄 Sending request to OpenRouter API...
-        Model: ${MODEL_NAME}
+        Model: ${selectedModel}
         Language: ${selectedLanguage}
         Temperature: ${temperature ?? 0.7}
         Prompt length: ${prompt.length} chars
@@ -153,7 +155,7 @@ export async function generateLLMText(
       console.log(`✅ Received response from OpenRouter API:
         Duration: ${duration}s
         Response length: ${text.length} chars
-        Model: ${data.model || MODEL_NAME}
+        Model: ${data.model || selectedModel}
         Tokens: ${data.usage?.total_tokens || 'unknown'}`);
       return text;
     } catch (error) {
@@ -169,12 +171,14 @@ export async function generateLLMTextStream(
   temperature?: number,
   topP?: number,
   topK?: number,
-  language?: string
+  language?: string,
+  model?: string
 ): Promise<string> {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenRouter API key is not initialized. OPENROUTER_API_KEY is missing.");
   }
 
+  const selectedModel = model || DEFAULT_MODEL;
   const selectedLanguage = language || globalLanguage;
 
   return retryWithBackoff(async () => {
@@ -190,7 +194,7 @@ export async function generateLLMTextStream(
       messages.push({ role: "user", content: prompt });
 
       console.log(`🔄 Starting stream from OpenRouter API...
-        Model: ${MODEL_NAME}
+        Model: ${selectedModel}
         Language: ${selectedLanguage}
         Prompt length: ${prompt.length} chars`);
       
@@ -206,7 +210,7 @@ export async function generateLLMTextStream(
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: MODEL_NAME,
+          model: selectedModel,
           messages,
           temperature: temperature ?? 0.7,
           top_p: topP ?? 1,
@@ -365,10 +369,11 @@ export async function generateLLMTextQueued(
   topP?: number,
   topK?: number,
   priority: 'high' | 'medium' | 'low' = 'medium',
-  language?: string
+  language?: string,
+  model?: string
 ): Promise<string> {
   return requestQueue.enqueue(
-    () => generateLLMText(prompt, systemInstruction, responseSchema, temperature, topP, topK, language),
+    () => generateLLMText(prompt, systemInstruction, responseSchema, temperature, topP, topK, language, model),
     priority
   );
 }

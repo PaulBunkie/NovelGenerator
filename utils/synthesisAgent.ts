@@ -2,6 +2,7 @@
  * Synthesis Agent - Integration specialist for combining specialist agent outputs
  */
 
+import { MODELS } from '../constants';
 import { generateLLMText } from '../services/llmService';
 import { StructureAgentOutput, CharacterAgentOutput, SceneAgentOutput } from './specialistAgents';
 
@@ -224,7 +225,9 @@ export class SynthesisAgent {
         undefined,
         0.6, // Lower creativity for transitions - should be subtle
         0.8,
-        30
+        30,
+        undefined,
+        MODELS.WRITING
       );
 
       return this.parseTransitions(transitionsContent);
@@ -332,7 +335,9 @@ Generate transitions now:`;
         undefined,
         0.3, // Very low creativity - this is assembly, not creation
         0.7,
-        20
+        20,
+        undefined,
+        MODELS.WRITING
       );
 
       return integratedContent;

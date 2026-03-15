@@ -3,6 +3,7 @@
  * This is the last editing step before compilation
  */
 
+import { MODELS } from '../constants';
 import { generateLLMText } from '../services/llmService';
 import { ChapterData, AgentLogEntry } from '../types';
 
@@ -192,7 +193,9 @@ Polished version of the chapter. Only chapter text, no comments.`;
       undefined,
       0.7, // Higher temperature for creative polish
       0.9,
-      40
+      40,
+      undefined,
+      MODELS.POLISH
     );
     
     // Validation: polished text should be similar length (within 40%)

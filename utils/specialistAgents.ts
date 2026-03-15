@@ -3,6 +3,7 @@
  * Specialized agents for different aspects of chapter generation
  */
 
+import { MODELS } from '../constants';
 import { generateLLMText } from '../services/llmService';
 import { ParsedChapterPlan } from '../types';
 import { StructureContext, CharacterContext, SceneContext, CoherenceConstraints } from './coherenceManager';
@@ -66,7 +67,9 @@ export class StructureAgent {
       undefined, // No JSON schema needed for structure
       0.7, // Higher creativity for structure
       0.9,
-      40
+      40,
+      undefined,
+      MODELS.WRITING
     );
 
     const output = this.parseStructureOutput(structureContent, input);
@@ -370,7 +373,9 @@ export class CharacterAgent {
       undefined,
       0.8, // High creativity for character content
       0.9,
-      40
+      40,
+      undefined,
+      MODELS.WRITING
     );
 
     const output = this.parseCharacterOutput(characterContent, input);
@@ -908,7 +913,9 @@ export class SceneAgent {
       undefined,
       0.8, // High creativity for atmospheric content
       0.9,
-      40
+      40,
+      undefined,
+      MODELS.WRITING
     );
 
     const output = this.parseSceneOutput(sceneContent, input);
